@@ -20,7 +20,9 @@ const upload = multer({
 }).single('image');
 
 // Người dùng
+router.get('/getUsersSend/:userID', apiU.getUserSend)
 router.get('/getUsers', apiU.getUser)
+router.get('/getUserCheckFrend/:userID', apiU.getUserCheckSendFriend)
 router.post('/register', apiU.registerUser);
 router.post('/login', apiU.loginUser);
 // gửi yêu cầu kb
@@ -32,7 +34,8 @@ router.put('/updatefriend/:friendId',apiU.updatefriendrequet)
 // Bài đăng
 // danh sach ban tin
 router.get('/getReadbook',apiRead.getReadbook)
-
+// danh sach bai viet cua user
+router.get('/getReadbookUser/:user_id',apiRead.getReadbookUser)
 // post bài đăng
 router.post('/postReadbook', upload ,apiRead.postData);
 // cập nhập trạng thái bài đăng (riêng tư, ẩn, công khai)
@@ -41,6 +44,13 @@ router.patch('/updateStatus/:postId', apiRead.updateStatusNols)
 router.delete('/deletePost/:postId',apiRead.deleteNouvelles)
 // like bài viết và dislike khi click lại
 router.post('/likePost/:postId', apiRead.likeNols)
+// bình luận
+router.post('/addcomment/:nouvelleId', apiRead.commentNols)
+// danh sach comment
+router.get('/getComment/:postId',apiRead.getComment)
 
+/// nhan tin 2 nguoi dung
+router.post('/sendMessage', apiU.sendMessage)
+router.get('/getMessage/:userId', apiU.getMessage)
 
 module.exports = router;

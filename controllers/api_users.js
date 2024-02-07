@@ -1,14 +1,60 @@
 const MyModel = require('../models/User.models')
+const MessageModel = require('../models/Message.model')
 const bcrypt = require('bcrypt');
 const router = require('../routes/api');
 
 
+exports.getUserSend = async (req, res, next) => {
+  const userID = req.params.userID
+  try {
+    const allPosts = await MyModel.userModel.findById(userID)
+      .populate({
+        path: 'friends.user_friend',
+        select: 'image username',
+      })
+      .populate('despostes.nouvelles_id')
+      .populate({
+        path: 'request.user_id',
+        select: 'image username',
+      });
+
+    if (!allPosts) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Calculate the number of friends for each user
+    const postsWithFriendCount = allPosts.toObject(); // Convert Mongoose document to plain JavaScript object
+    postsWithFriendCount.friendsCount = postsWithFriendCount.friends.length;
+
+    if (postsWithFriendCount.comment) {
+      postsWithFriendCount.comment.reverse();
+    }
+
+    res.json(postsWithFriendCount);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+}
 exports.getUser = async (req, res, next) => {
   try {
     const allPosts = await MyModel.userModel.find().populate({
       path: 'friends.user_friend',
       select: 'image username',
     }).populate('despostes.nouvelles_id')
+  
+    res.json(allPosts);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+}
+exports.getUserCheckSendFriend = async (req, res, next) => {
+  const userID = req.params.userID
+  try {
+    const allPosts = await MyModel.userModel.findById(userID)
+    .populate('request').populate('friends')
+  
     res.json(allPosts);
   } catch (error) {
     console.error(error);
@@ -65,7 +111,7 @@ exports.loginUser = async (req, res, next) =>{
     //   res.json({ token });
       res.status(201).json({ message: 'Đăng nhập thành công',password: user.password,
       _id: user._id,email: user.email, username: user.username,phone: user.phone, 
-      image: user.image,phone: user.phone,dob: user.dob,sex: user.sex, despostes:user.despostes});
+      image: user.image,phone: user.phone,dob: user.dob,sex: user.sex, despostes:user.despostes,});
     } catch (error) {
       console.error('Đăng nhập thất bại:', error);
       res.status(500).json({ message: 'Đăng nhập thất bại' });
@@ -102,7 +148,6 @@ exports.sendfriend = async (req, res) => {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 }
-
 exports.updatefriendrequet = async (req, res) => {
   try {
     const { friendId } = req.params;
@@ -153,4 +198,68 @@ exports.updatefriendrequet = async (req, res) => {
     console.error(error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
+}
+const moment = require('moment-timezone');
+
+exports.sendMessage = async (req, res) => {
+  const { sender, receiver, messages } = req.body;
+  
+  const formattedDateVN = moment().tz('Asia/Ho_Chi_Minh').format('HH:mm DD-MM-YYYY');
+  try {
+      let existingMessage = await MessageModel.MessageesModel.findOne({ sender, receiver });
+
+      // Check if there is an existing message thread with the swapped sender and receiver
+      if (!existingMessage) {
+          existingMessage = await MessageModel.MessageesModel.findOne({ sender: receiver, receiver: sender });
+      }
+
+      if (existingMessage) {
+          existingMessage.messages.push({ 
+            user_id: messages[0].user_id,
+            message: messages[0].message, 
+            timestamp: formattedDateVN 
+          });
+
+          await existingMessage.save();
+          res.status(201).json(existingMessage);
+      } else {
+          const newMessage = new MessageModel.MessageesModel({
+              sender,
+              receiver,
+              messages: [{ 
+                user_id: messages[0].user_id,
+                message: messages[0].message,
+                timestamp: formattedDateVN 
+              }],
+          });
+          const savedMessage = await newMessage.save();
+          res.status(201).json(savedMessage);
+      }
+  } catch (err) {
+      res.status(400).json({ message: err.message });
+  }
+};
+exports.getMessage = async (req, res, next) => {
+  const { userId } = req.params;
+    try {
+      const messages = await MessageModel.MessageesModel
+    //   .find({
+    //     $or: [{ sender: userId }, { receiver: userId }]
+    // })
+    .find({'messages.user_id_friend': userId})
+        .populate(
+          {
+            path:'messages.user_id',
+            select:'image'
+          }
+        ).populate(
+          {
+            path:'messages.user_id_friend',
+            select:'image'
+          }
+        )
+        res.status(200).json(messages);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
 }

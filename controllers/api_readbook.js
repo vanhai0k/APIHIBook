@@ -13,7 +13,69 @@ exports.getReadbook = async (req, res, next) => {
       populate: {
         path: 'despostes.nouvelles_id',
       },
+    }).populate({
+      path: 'comment.user_id',
+      select: 'image username',
     });
+    const postsWithLikeCount = allPosts.map(post => {
+      const likeCount = post.like.filter(like => like.status === 'like').length;
+      const commentCount = post.comment.length;
+      return {
+        ...post.toObject(),
+        likeCount,
+        commentCount
+      };
+    });
+
+    res.json(postsWithLikeCount);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+}
+
+exports.getReadbookUser = async (req, res, next) => {
+  const user_id = req.params.user_id
+  try {
+    const allPosts = await MyModel.NouvellesModel.find({'userID': user_id})
+    .populate({
+      path: 'like.user_id',
+      select: 'image username',
+    }).populate({
+      path: 'userID',
+      populate: {
+        path: 'despostes.nouvelles_id',
+      },
+    }).populate({
+      path: 'comment.user_id',
+      select: 'image username',
+    });
+    res.json(allPosts);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+}
+exports.getComment = async (req, res, next) => {
+  try {
+    const postId = req.params.postId;
+    const allPosts = await MyModel.NouvellesModel.findById(postId).populate({
+      path: 'like.user_id',
+      select: 'image username',
+    }).populate({
+      path: 'userID',
+      populate: {
+        path: 'despostes.nouvelles_id',
+      },
+    }).populate({
+      path: 'comment.user_id',
+      select: 'image username',
+    });
+
+    if (allPosts && allPosts.comment) {
+      allPosts.comment.reverse();
+    }
+
     res.json(allPosts);
   } catch (error) {
     console.error(error);
@@ -201,6 +263,34 @@ exports.likeNols = async (req, res) => {
     }
   };
   
-  
+exports.commentNols = async (req, res) => {
+  const { nouvelleId } = req.params;
+    const { user_id, content } = req.body; // Assuming you are sending user_id and content in the request body
+
+    try {
+        // Find the Nouvelle by ID
+        const nouvelle = await MyModel.NouvellesModel.findById(nouvelleId);
+
+        if (!nouvelle) {
+            return res.status(404).json({ message: 'Nouvelle not found' });
+        }
+
+        // Add the comment to the array
+        nouvelle.comment.push({
+            user_id: user_id,
+            content: content,
+        });
+
+        // Save the updated Nouvelle
+        await nouvelle.save();
+
+        return res.status(200).json({ message: 'Comment added successfully', nouvelle });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+}
+
+
   
   

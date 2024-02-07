@@ -19,8 +19,7 @@ var db = require('./db');
      request: [{
       // danh sách người yêu cầu kb
       user_id: {type: db.mongoose.Schema.Types.ObjectId, ref: 'userModel'},
-      status: { type: String, enum: ['pending', 'accepted', 'rejected'], default: 'pending' }
-
+      status: { type: String, enum: ['pending', 'accepted', 'rejected'], default: 'pending' },
      }]
   },{
     collection: 'Users'
