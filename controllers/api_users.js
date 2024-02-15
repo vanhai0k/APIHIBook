@@ -243,21 +243,43 @@ exports.getMessage = async (req, res, next) => {
   const { userId } = req.params;
     try {
       const messages = await MessageModel.MessageesModel
-    //   .find({
-    //     $or: [{ sender: userId }, { receiver: userId }]
-    // })
-    .find({'messages.user_id_friend': userId})
-        .populate(
+      .find({ $or: [{ 'sender': userId }, { 'receiver': userId }] })
+      .populate(
           {
             path:'messages.user_id',
-            select:'image'
+            select:'image username'
           }
-        ).populate(
+        ).populate({
+          path:'receiver',
+          select:'image username'
+        }).populate({
+          path:'sender',
+          select:'image username'
+        })
+
+        res.status(200).json(messages);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+}
+exports.getChatMessage = async (req, res, next) => {
+  const { userId } = req.params;
+    try {
+      const messages = await MessageModel.MessageesModel
+      .find({ $or: [{ 'sender': userId }, { 'receiver': userId }] })
+      .populate(
           {
-            path:'messages.user_id_friend',
-            select:'image'
+            path:'messages.user_id',
+            select:'image username'
           }
-        )
+        ).populate({
+          path:'receiver',
+          select:'image username'
+        }).populate({
+          path:'sender',
+          select:'image username'
+        })
+
         res.status(200).json(messages);
     } catch (err) {
         res.status(500).json({ message: err.message });

@@ -1,8 +1,8 @@
 var db = require('./db');
 
 const MessageSchema = new db.mongoose.Schema({
-    sender: {type: String},
-    receiver: {type: String},
+    sender: {type: db.mongoose.Schema.Types.ObjectId, ref: 'userModel'},
+    receiver: {type: db.mongoose.Schema.Types.ObjectId, ref: 'userModel'},
     messages: [{
         user_id: {type: db.mongoose.Schema.Types.ObjectId, ref: 'userModel'},
         message: {type: String},
