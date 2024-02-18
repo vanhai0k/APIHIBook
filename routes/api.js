@@ -54,4 +54,5 @@ router.post('/sendMessage', apiU.sendMessage)
 router.get('/getMessage/:userId', apiU.getMessage)
 router.get('/getChatMessage/:userId', apiU.getChatMessage)
 
+
 module.exports = router;
