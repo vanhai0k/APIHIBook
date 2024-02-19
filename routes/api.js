@@ -29,13 +29,15 @@ router.post('/login', apiU.loginUser);
 router.post('/sendfriend/:friendId',apiU.sendfriend)
 // đồng ý kb
 router.put('/updatefriend/:friendId',apiU.updatefriendrequet)
-
+// xóa kết bạn
+router.delete('/deleteSendFriend/:id/:id_request',apiU.deleteFriendRequest )
 
 // Bài đăng
 // danh sach ban tin
 router.get('/getReadbook',apiRead.getReadbook)
 // danh sach bai viet cua user
 router.get('/getReadbookUser/:user_id',apiRead.getReadbookUser)
+
 // post bài đăng
 router.post('/postReadbook', upload ,apiRead.postData);
 // cập nhập trạng thái bài đăng (riêng tư, ẩn, công khai)
@@ -53,6 +55,10 @@ router.get('/getComment/:postId',apiRead.getComment)
 router.post('/sendMessage', apiU.sendMessage)
 router.get('/getMessage/:userId', apiU.getMessage)
 router.get('/getChatMessage/:userId', apiU.getChatMessage)
+// update thong báo
 
+router.get('/getNotification/:user_id',apiRead.getNotification)
+
+router.patch('/udnotification/:id/:notificationId', apiRead.UpdateNotificationStatus)
 
 module.exports = router;

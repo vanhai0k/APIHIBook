@@ -5,10 +5,16 @@ const moment = require('moment-timezone');
 const date = new Date();
 exports.getReadbook = async (req, res, next) => {
   try {
-    const allPosts = await MyModel.NouvellesModel.find().populate({
+    const allPosts = await MyModel.NouvellesModel.find()
+    .populate({
       path: 'like.user_id',
       select: 'image username',
-    }).populate({
+    })
+    .populate({
+      path: 'notification.user_id',
+      select: 'image username',
+    })
+    .populate({
       path: 'userID',
       populate: {
         path: 'despostes.nouvelles_id',
@@ -41,6 +47,10 @@ exports.getReadbookUser = async (req, res, next) => {
     .populate({
       path: 'like.user_id',
       select: 'image username',
+    })
+    .populate({
+      path: 'notification.user_id',
+      select: 'image username',
     }).populate({
       path: 'userID',
       populate: {
@@ -56,11 +66,48 @@ exports.getReadbookUser = async (req, res, next) => {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 }
+
+exports.getNotification = async (req, res, next) => {
+  const user_id = req.params.user_id
+  try {
+    const allPosts = await MyModel.NouvellesModel.find({'userID': user_id})
+    .populate({
+      path: 'like.user_id',
+      select: 'image username',
+    })
+    .populate({
+      path: 'notification.user_id',
+      select: 'image username',
+    }).populate({
+      path: 'userID',
+      populate: {
+        path: 'despostes.nouvelles_id',
+      },
+    }).populate({
+      path: 'comment.user_id',
+      select: 'image username',
+    });
+
+     // Kiểm tra và đảo ngược mảng notification nếu tồn tại
+     if (allPosts && allPosts.notification) {
+      allPosts.notification.reverse();
+    }
+
+    res.json(allPosts);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+}
 exports.getComment = async (req, res, next) => {
   try {
     const postId = req.params.postId;
     const allPosts = await MyModel.NouvellesModel.findById(postId).populate({
       path: 'like.user_id',
+      select: 'image username',
+    })
+    .populate({
+      path: 'notification.user_id',
       select: 'image username',
     }).populate({
       path: 'userID',
@@ -213,55 +260,67 @@ exports.deleteNouvelles = async (req, res) => {
 
 
 exports.likeNols = async (req, res) => {
-    try {
-      const { postId } = req.params;
-      const { user_id } = req.body;
-  
-      if (!postId || !user_id) {
-        return res.status(400).json({
-          message: "Missing postId or userId in request parameters",
-        });
-      }
-  
-      const post = await MyModel.NouvellesModel.findById(postId);
-  
-      if (!post) {
-        return res.status(404).json({ message: "Bài viết không tồn tại" });
-      }
-  
-      let userLike;
-  
-      // Kiểm tra xem post.like có tồn tại và không rỗng
-      if (post.like && post.like.length > 0) {
-        userLike = post.like.find(like => like.user_id && like.user_id.toString() === user_id);
-  
-        if (userLike) {
-          // Nếu đã like, loại bỏ like; nếu chưa like, thêm like
-          post.like = post.like.filter(like => like.user_id && like.user_id.toString() !== user_id);
-        } else {
-          post.like.push({ user_id, status: "like" });
-        }
-      } else {
-        // Nếu post.like không tồn tại hoặc rỗng, thêm một phần tử mới
-        post.like = [{ user_id, status: "like" }];
-      }
+  try {
+    const { postId } = req.params;
+    const { user_id } = req.body;
 
-      const updatedPost = await post.save();
-      // Tìm và cập nhật người dùng để lưu trạng thái likeStatus
-      const user = await UserModel.userModel.findById(user_id);
-      if (user) {
-        user.likeStatus = userLike ? "disliked" : "liked";
-        await user.save();
-      } else {
-        return res.status(404).json({ message: 'Người dùng không tồn tại' });
-      }
-  
-      res.status(200).json({ message: userLike ? "Dislike bài viết thành công" : "Like bài viết thành công", post: updatedPost });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: "Đã xảy ra lỗi", error });
+    if (!postId || !user_id) {
+      return res.status(400).json({
+        message: "Missing postId or userId in request parameters",
+      });
     }
-  };
+
+    const post = await MyModel.NouvellesModel.findById(postId);
+
+    if (!post) {
+      return res.status(404).json({ message: "Bài viết không tồn tại" });
+    }
+
+    // Kiểm tra xem người dùng đã like bài viết chưa
+    const userLikeIndex = post.like.findIndex(
+      (like) => like.user_id && like.user_id.toString() === user_id
+    );
+
+    const userNotificationIndex = post.notification.findIndex(
+      (notification) => notification.user_id && notification.user_id.toString() === user_id
+    );
+
+    if (userLikeIndex !== -1) {
+      // Nếu đã like, loại bỏ like
+      post.like.splice(userLikeIndex, 1);
+      // bỏ thông báo
+      post.notification.splice(userNotificationIndex, 1);
+
+    } else {
+      // Nếu chưa like, thêm like vào bài viết và tạo thông báo
+      post.like.push({ user_id, status: "like" });
+
+      const notification = {
+        user_id: user_id, // Người viết bài
+        datetime: formattedDateVN, // Thời gian hiện tại
+        statusSend: "unread", // Trạng thái thông báo chưa đọc
+      };
+
+      post.notification.push(notification);
+    }
+
+    // Lưu các thay đổi vào cơ sở dữ liệu
+    const updatedPost = await post.save();
+
+    // Trả về kết quả
+    res.status(200).json({
+      message: userLikeIndex !== -1
+        ? "Dislike bài viết thành công"
+        : "Like bài viết thành công",
+      post: updatedPost,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Đã xảy ra lỗi", error });
+  }
+};
+
+
   
 exports.commentNols = async (req, res) => {
   const { nouvelleId } = req.params;
@@ -289,6 +348,29 @@ exports.commentNols = async (req, res) => {
         console.error(error);
         return res.status(500).json({ message: 'Internal server error' });
     }
+}
+
+exports.UpdateNotificationStatus = async (req, res) => {
+  let data = {
+    status: 1,
+    msg: "update",
+  };
+  if (req.method == "PATCH") {
+    try {
+      console.log("ID của tài liệu:", req.params.id);
+      console.log("ID của thông báo:", req.params.notificationId);
+
+      await MyModel.NouvellesModel.updateOne(
+        { _id: req.params.id, 'notification._id': req.params.notificationId },
+        { $set: { 'notification.$.statusSend': 'read' } }
+      );
+      res.status(200).json(data);
+    } catch (err) {
+      res.status(400).json({ message: err.message });
+    }
+  } else {
+    res.status(400).json({ status: 0, msg: "Invalid request method" });
+  }
 }
 
 

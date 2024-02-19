@@ -7,6 +7,13 @@ const NouvellesSchema = new db.mongoose.Schema({
             status: {type: String},
         }
     ],
+    notification:[
+      {
+        user_id: {type: db.mongoose.Schema.Types.ObjectId, ref: 'userModel'},
+        datetime: {type: String},
+        statusSend: {type: String}
+      }
+    ],
     image: { type: String },
     title: { type: String },
     content: { type: String },

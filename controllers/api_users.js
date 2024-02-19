@@ -148,6 +148,8 @@ exports.sendfriend = async (req, res) => {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 }
+
+
 exports.updatefriendrequet = async (req, res) => {
   try {
     const { friendId } = req.params;
@@ -285,5 +287,32 @@ exports.getChatMessage = async (req, res, next) => {
         res.status(500).json({ message: err.message });
     }
 }
+
+exports.deleteFriendRequest = async (req, res) => {
+  let data = {
+    status: 1,
+    msg: "delete",
+  };
+
+  if (req.method === "DELETE") {
+    try {
+      console.log("User ID:", req.params.id);
+      console.log("Friend Request ID:", req.params.id_request);
+
+      // Remove the friend request from the request array
+      await MyModel.userModel.updateOne(
+        { _id: req.params.id },
+        { $pull: { request: { _id: req.params.id_request } } }
+      );
+
+      res.status(200).json(data);
+    } catch (err) {
+      res.status(400).json({ message: err.message });
+    }
+  } else {
+    res.status(400).json({ status: 0, msg: "Invalid request method" });
+  }
+}
+
 
 
