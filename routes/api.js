@@ -61,4 +61,6 @@ router.get('/getNotification/:user_id',apiRead.getNotification)
 
 router.patch('/udnotification/:id/:notificationId', apiRead.UpdateNotificationStatus)
 
+router.get('/countNoti/:userID', apiRead.countNotificationsByUserId)
+
 module.exports = router;

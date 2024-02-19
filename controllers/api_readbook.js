@@ -372,6 +372,41 @@ exports.UpdateNotificationStatus = async (req, res) => {
     res.status(400).json({ status: 0, msg: "Invalid request method" });
   }
 }
+var db = require('../models/db');
+const mongoose = require('mongoose');
+
+exports.countNotificationsByUserId = async (req, res) => {
+  try {
+      const userID = req.params.userID;
+
+      // Kiểm tra xem userID có hợp lệ không
+      if (!mongoose.Types.ObjectId.isValid(userID)) {
+          return res.status(400).json({ error: 'Invalid userID' });
+      }
+
+      // Tìm kiếm bài viết với userID tương ứng
+      const posts = await MyModel.NouvellesModel.find({ userID });
+
+      let totalNotifications = 0;
+
+      // Duyệt qua mỗi bài viết và đếm số lượng thông báo
+      posts.forEach(post => {
+        post.notification.forEach(notification => {
+            if (notification.statusSend === 'unread') {
+                totalNotifications++;
+            }
+        });
+    });
+
+      res.json({ totalNotifications });
+  } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+
+
 
 
   
